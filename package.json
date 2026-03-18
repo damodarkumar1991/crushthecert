@@ -4,6 +4,7 @@
   "description": "AI-powered cert prep platform",
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "stripe": "^14.0.0"
+    "stripe": "^14.0.0",
+    "resend": "^3.0.0"
   }
 }
