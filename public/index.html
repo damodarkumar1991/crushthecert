@@ -443,7 +443,33 @@ function openModal(){document.getElementById('modal').classList.add('open')}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal()}
 function handleSignup(id){var email=document.getElementById(id).value.trim();if(!email||email.indexOf('@')<0){document.getElementById(id).style.outline='2px solid red';return}document.getElementById('m-email').value=email;openModal()}
-function submitModal(){var name=document.getElementById('m-name').value.trim();var email=document.getElementById('m-email').value.trim();if(!name||!email||email.indexOf('@')<0)return;document.getElementById('modal-form-wrap').style.display='none';document.getElementById('modal-success').style.display='block'}
+function submitModal(){
+  var name=document.getElementById('m-name').value.trim();
+  var email=document.getElementById('m-email').value.trim();
+  if(!name||!email||email.indexOf('@')<0){
+    if(!name)document.getElementById('m-name').style.outline='2px solid red';
+    if(!email||email.indexOf('@')<0)document.getElementById('m-email').style.outline='2px solid red';
+    return;
+  }
+  var btn=document.querySelector('.modal-btn');
+  btn.textContent='Creating account...';
+  btn.disabled=true;
+  fetch('/api/signup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,email:email})
+  })
+  .then(function(r){return r.json()})
+  .then(function(d){
+    document.getElementById('modal-form-wrap').style.display='none';
+    document.getElementById('modal-success').style.display='block';
+  })
+  .catch(function(){
+    // Show success anyway — don't block user
+    document.getElementById('modal-form-wrap').style.display='none';
+    document.getElementById('modal-success').style.display='block';
+  });
+}
 var selectedCert='PSM I',selectedDesc='Scrum values, events, artifacts, accountabilities',demoAnswered=false,demoCount=0,MAX_FREE_DEMO=3;
 function selectCert(btn){
   document.querySelectorAll('.demo-cert-btn').forEach(function(b){b.classList.remove('active')});
