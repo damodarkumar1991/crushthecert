@@ -1,1 +1,9 @@
-{"name":"crushthecert","version":"1.0.0","description":"AI-powered cert prep platform","dependencies":{"@supabase/supabase-js":"^2.39.0","stripe":"^14.0.0"}}
+{
+  "name": "crushthecert",
+  "version": "1.0.0",
+  "description": "AI-powered cert prep platform",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "stripe": "^14.0.0"
+  }
+}
