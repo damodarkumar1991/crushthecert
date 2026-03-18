@@ -445,38 +445,75 @@ function closeModalOutside(e){if(e.target===document.getElementById('modal'))clo
 function handleSignup(id){var email=document.getElementById(id).value.trim();if(!email||email.indexOf('@')<0){document.getElementById(id).style.outline='2px solid red';return}document.getElementById('m-email').value=email;openModal()}
 function submitModal(){var name=document.getElementById('m-name').value.trim();var email=document.getElementById('m-email').value.trim();if(!name||!email||email.indexOf('@')<0)return;document.getElementById('modal-form-wrap').style.display='none';document.getElementById('modal-success').style.display='block'}
 var selectedCert='PSM I',selectedDesc='Scrum values, events, artifacts, accountabilities',demoAnswered=false,demoCount=0,MAX_FREE_DEMO=3;
-function selectCert(btn){document.querySelectorAll('.demo-cert-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');selectedCert=btn.dataset.cert;selectedDesc=btn.dataset.desc;document.getElementById('cert-desc-txt').textContent=selectedDesc;document.getElementById('lqb-cert-name').textContent=selectedCert;document.getElementById('lqb-status').textContent='Ready';demoAnswered=false;document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>AI is ready</strong>Select a cert and hit generate.</div>'}
+function selectCert(btn){
+  document.querySelectorAll('.demo-cert-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  selectedCert=btn.dataset.cert;
+  selectedDesc=btn.dataset.desc;
+  document.getElementById('cert-desc-txt').textContent=selectedDesc;
+  document.getElementById('lqb-cert-name').textContent=selectedCert;
+  document.getElementById('lqb-status').textContent='Ready';
+  demoAnswered=false;
+  document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>AI is ready</strong>Hit generate to see a '+selectedCert+' question.</div>';
+}
 function generateDemoQuestion(){
   if(demoCount>=MAX_FREE_DEMO){openModal();return}
-  var btn=document.getElementById('demo-btn');btn.disabled=true;
+  var btn=document.getElementById('demo-btn');
+  btn.disabled=true;
   document.getElementById('demo-btn-txt').textContent='Generating...';
   document.getElementById('lqb-status').textContent='AI thinking...';
   document.getElementById('lqb-body').innerHTML='<div class="lqb-loading"><div class="lqb-spinner"></div><div class="lqb-loading-txt">AI generating your '+selectedCert+' question...</div></div>';
   demoAnswered=false;
-  fetch('/api/question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cert:selectedCert,desc:selectedDesc,previousQuestions:[]})})
+  fetch('/api/question',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({cert:selectedCert,desc:selectedDesc,previousQuestions:[]})
+  })
   .then(function(res){return res.json().then(function(q){if(!res.ok)throw new Error(q.error||'API error');return q})})
-  .then(function(q){demoCount++;renderQuestion(q);document.getElementById('lqb-status').textContent='Question '+demoCount;btn.disabled=false;document.getElementById('demo-btn-txt').textContent=demoCount>=MAX_FREE_DEMO?'Sign up for more →':'Generate another →'})
-  .catch(function(e){document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>Could not load question</strong>Check your connection and try again.</div>';btn.disabled=false;document.getElementById('demo-btn-txt').textContent='Try again →'})
+  .then(function(q){
+    demoCount++;
+    renderQuestion(q);
+    document.getElementById('lqb-status').textContent='Question '+demoCount;
+    btn.disabled=false;
+    document.getElementById('demo-btn-txt').textContent=demoCount>=MAX_FREE_DEMO?'Sign up for more →':'Generate another →';
+  })
+  .catch(function(e){
+    document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>Could not load question</strong>'+e.message+'</div>';
+    btn.disabled=false;
+    document.getElementById('demo-btn-txt').textContent='Try again →';
+  });
 }
 var LETTERS=['A','B','C','D'];
 function renderQuestion(q){
+  demoAnswered=false;
   var opts='';
   for(var i=0;i<q.options.length;i++){
-    var o=q.options[i].replace(/^[A-D]\)\s*/,'');
-    opts+='<button class="lqb-opt" id="lopt-'+i+'" onclick="selectAnswer('+i+','+q.correct+',\''+encodeURIComponent(q.explanation)+'\')"><div class="lqb-letter">'+LETTERS[i]+'</div><span>'+o+'</span></button>';
+    var o=q.options[i].replace(/^[A-D][).]\s*/,'');
+    var enc=encodeURIComponent(q.explanation);
+    opts+='<button class="lqb-opt" id="lopt-'+i+'" data-idx="'+i+'" data-correct="'+q.correct+'" data-exp="'+enc+'"><div class="lqb-letter">'+LETTERS[i]+'</div><span>'+o+'</span></button>';
   }
   document.getElementById('lqb-body').innerHTML='<p class="lqb-q">'+q.question+'</p><div class="lqb-opts" id="lqb-opts">'+opts+'</div><div id="lqb-explain-wrap"></div><div id="lqb-next-wrap"></div>';
+  document.querySelectorAll('.lqb-opt').forEach(function(b){
+    b.addEventListener('click',function(){
+      var idx=parseInt(this.getAttribute('data-idx'));
+      var correct=parseInt(this.getAttribute('data-correct'));
+      var enc=this.getAttribute('data-exp');
+      selectAnswer(idx,correct,enc);
+    });
+  });
 }
 function selectAnswer(sel,correct,encExp){
-  if(demoAnswered)return;demoAnswered=true;
+  if(demoAnswered)return;
+  demoAnswered=true;
   document.querySelectorAll('.lqb-opt').forEach(function(b){b.disabled=true});
   var isRight=(sel===correct);
-  document.getElementById('lopt-'+sel).classList.add(isRight?'correct':'wrong');
-  if(!isRight)document.getElementById('lopt-'+correct).classList.add('correct');
+  var selBtn=document.getElementById('lopt-'+sel);
+  if(selBtn)selBtn.classList.add(isRight?'correct':'wrong');
+  if(!isRight){var cb=document.getElementById('lopt-'+correct);if(cb)cb.classList.add('correct');}
   var exp=decodeURIComponent(encExp);
-  var gate='<div class="lqb-pro-gate" style="margin-top:10px"><strong>Full AI explanation is a Pro feature</strong>See exactly why each answer is right or wrong.<br><a onclick="openModal()">Unlock with Pro → A$19.99/month</a></div>';
-  document.getElementById('lqb-explain-wrap').innerHTML='<div class="lqb-explain"><strong>'+(isRight?'✓ Correct!':'✗ Incorrect.')+'</strong> '+exp.substring(0,80)+'...'+gate+'</div>';
-  var nextBtn=demoCount>=MAX_FREE_DEMO?'<button class="lqb-next" onclick="openModal()">Sign up for unlimited →</button>':'<button class="lqb-next" onclick="generateDemoQuestion()">Next question →</button>';
+  var gate='<div class="lqb-pro-gate" style="margin-top:10px"><strong>Full AI explanation is a Pro feature</strong>See exactly why each answer is right or wrong — and never make the same mistake twice.<br><a onclick="openModal()" style="cursor:pointer">Unlock with Pro → A$19.99/month</a></div>';
+  document.getElementById('lqb-explain-wrap').innerHTML='<div class="lqb-explain"><strong>'+(isRight?'✓ Correct!':'✗ Incorrect.')+'</strong> '+exp.substring(0,100)+'...'+gate+'</div>';
+  var nextBtn=demoCount>=MAX_FREE_DEMO?'<button class="lqb-next" onclick="openModal()">Sign up for unlimited questions →</button>':'<button class="lqb-next" onclick="generateDemoQuestion()">Next question →</button>';
   document.getElementById('lqb-next-wrap').innerHTML=nextBtn;
 }
 function toggleFaq(el){el.parentElement.classList.toggle('open')}
