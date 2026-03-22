@@ -212,6 +212,23 @@ var selectedDesc = 'Scrum values, events, artifacts, accountabilities';
 var LETTERS = ['A','B','C','D'];
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
+// Also catch token from URL hash (Supabase lands here directly)
+(function catchHash() {
+  var h = window.location.hash;
+  if (!h || !h.includes('access_token')) return;
+  var p = {};
+  h.substring(1).split('&').forEach(function(s) {
+    var kv = s.split('=');
+    p[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1]||'').replace(/\+/g,' '));
+  });
+  if (p['access_token']) {
+    localStorage.setItem('ctc_token', p['access_token']);
+    if (p['refresh_token']) localStorage.setItem('ctc_refresh', p['refresh_token']);
+    token = p['access_token'];
+    window.history.replaceState({}, '', '/portal');
+  }
+})();
+
 function boot() {
   if (!token) {
     window.location.href = '/login';
