@@ -1,1 +1,32 @@
-{"rewrites":[{"source":"/api/(.*)","destination":"/api/$1"},{"source":"/(.*)","destination":"/public/$1"}]}
+{
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/portal",
+      "destination": "/portal.html"
+    },
+    {
+      "source": "/api/magic-link",
+      "destination": "/api/magic-link.js"
+    },
+    {
+      "source": "/api/me",
+      "destination": "/api/me.js"
+    },
+    {
+      "source": "/api/question",
+      "destination": "/api/question.js"
+    },
+    {
+      "source": "/api/signup",
+      "destination": "/api/signup.js"
+    },
+    {
+      "source": "/api/stripe-webhook",
+      "destination": "/api/stripe-webhook.js"
+    }
+  ]
+}
