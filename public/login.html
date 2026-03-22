@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — CrushTheCert</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#0a0a0a;--white:#fafaf8;--off:#f2f1ee;--border:#e0ddd8;--muted:#888580;--serif:'Playfair Display',Georgia,serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace}
+body{background:var(--white);color:var(--black);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--black);text-decoration:none;margin-bottom:48px;display:block;text-align:center}
+.logo span{opacity:0.4}
+.card{background:var(--white);border:1.5px solid var(--black);border-radius:16px;padding:40px;max-width:400px;width:100%;box-shadow:8px 8px 0 var(--black)}
+h1{font-family:var(--serif);font-size:28px;font-weight:900;margin-bottom:8px}
+.sub{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.6}
+label{display:block;font-size:12px;font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:13px 16px;font-family:var(--sans);font-size:14px;outline:none;margin-bottom:20px;transition:border-color 0.2s;background:var(--white);color:var(--black)}
+input:focus{border-color:var(--black)}
+button{width:100%;background:var(--black);color:var(--white);border:none;border-radius:8px;padding:14px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;transition:opacity 0.2s}
+button:hover{opacity:0.8}
+button:disabled{opacity:0.5;cursor:default}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px;font-family:var(--mono)}
+.success{display:none;text-align:center;padding:20px 0}
+.success .icon{font-size:40px;margin-bottom:16px}
+.success h2{font-family:var(--serif);font-size:22px;font-weight:700;margin-bottom:8px}
+.success p{font-size:14px;color:var(--muted);line-height:1.6}
+.back{display:block;text-align:center;margin-top:24px;font-size:13px;color:var(--muted);text-decoration:none}
+.back:hover{color:var(--black)}
+.error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:13px;color:#dc2626;margin-bottom:16px;display:none}
+</style>
+</head>
+<body>
+<a href="/" class="logo">Crush<span>The</span>Cert</a>
+<div class="card">
+  <div id="form-wrap">
+    <h1>Sign in</h1>
+    <p class="sub">Enter your email and we'll send you a magic link — no password needed.</p>
+    <div class="error-msg" id="error-msg"></div>
+    <label>Email address</label>
+    <input type="email" id="email" placeholder="you@example.com" autofocus>
+    <button id="btn" onclick="sendMagicLink()">Send magic link →</button>
+    <p class="note">Pro subscribers: use the email you signed up with</p>
+  </div>
+  <div class="success" id="success">
+    <div class="icon">📬</div>
+    <h2>Check your inbox</h2>
+    <p>We sent a magic link to <strong id="sent-email"></strong>.<br>Click it to sign in — it expires in 1 hour.</p>
+  </div>
+</div>
+<a href="/" class="back">← Back to crushthecert.com</a>
+
+<script>
+// Check if we have a token in URL hash (after magic link click)
+(async function() {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    const refresh = params.get('refresh_token');
+    if (token) {
+      // Store session and redirect to portal
+      localStorage.setItem('ctc_access_token', token);
+      if (refresh) localStorage.setItem('ctc_refresh_token', refresh);
+      // Verify plan and redirect
+      try {
+        const r = await fetch('/api/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const d = await r.json();
+        if (d.plan === 'pro') {
+          window.location.href = '/portal';
+        } else {
+          window.location.href = '/portal?plan=free';
+        }
+      } catch(e) {
+        window.location.href = '/portal';
+      }
+    }
+  }
+})();
+
+async function sendMagicLink() {
+  const email = document.getElementById('email').value.trim();
+  const btn = document.getElementById('btn');
+  const errEl = document.getElementById('error-msg');
+  errEl.style.display = 'none';
+
+  if (!email || !email.includes('@')) {
+    document.getElementById('email').style.outline = '2px solid red';
+    return;
+  }
+
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/api/magic-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to send');
+    document.getElementById('sent-email').textContent = email;
+    document.getElementById('form-wrap').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.textContent = 'Send magic link →';
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('email').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') sendMagicLink();
+});
+</script>
+</body>
+</html>
