@@ -248,7 +248,7 @@ function boot() {
     document.getElementById('greeting-text').textContent = 'Welcome back, ' + name + '.';
     document.getElementById('greeting-sub').textContent = userPlan === 'pro'
       ? 'You have unlimited questions + full AI explanations.'
-      : 'You're on the free plan — 10 questions/day.';
+      : 'You are on the free plan — 10 questions/day.';
     document.getElementById('nav-email').textContent = user.email || '';
     document.getElementById('plan-badge').textContent = userPlan === 'pro' ? 'Pro' : 'Free';
     document.getElementById('plan-badge').className = 'plan-badge ' + userPlan;
