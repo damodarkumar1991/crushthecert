@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script id="ctc-auth-catcher">(function(){var h=window.location.hash;if(!h||!h.includes('access_token'))return;var p={};h.substring(1).split('&').forEach(function(s){var kv=s.split('=');p[decodeURIComponent(kv[0])]=decodeURIComponent((kv[1]||'').replace(/\+/g,' '));});var t=p['access_token'],r=p['refresh_token'];if(!t)return;localStorage.setItem('ctc_token',t);if(r)localStorage.setItem('ctc_refresh',r);window.location.replace('/portal');})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CrushTheCert — AI-Powered Cert Prep</title>
