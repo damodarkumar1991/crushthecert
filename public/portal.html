@@ -201,7 +201,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,250,248,
 </div>
 
 <script>
-var token = localStorage.getItem('ctc_access_token');
+var token = localStorage.getItem('ctc_token');
 var userPlan = 'free';
 var userId = null;
 var sessionTotal = 0;
@@ -211,45 +211,47 @@ var selectedCert = 'PSM I';
 var selectedDesc = 'Scrum values, events, artifacts, accountabilities';
 var LETTERS = ['A','B','C','D'];
 
-// Auth check on load
-(async function init() {
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+function boot() {
   if (!token) {
     window.location.href = '/login';
     return;
   }
-  try {
-    var r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (r.status === 401) { signOut(); return; }
-    var user = await r.json();
+  fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+  .then(function(r) {
+    if (r.status === 401) { signOut(); return null; }
+    return r.json();
+  })
+  .then(function(user) {
+    if (!user) return;
     userId = user.id;
-    userPlan = user.plan;
+    userPlan = user.plan || 'free';
 
-    // Update UI
-    var name = user.name || user.email.split('@')[0];
+    var name = user.name || (user.email ? user.email.split('@')[0] : 'there');
     document.getElementById('greeting-text').textContent = 'Welcome back, ' + name + '.';
     document.getElementById('greeting-sub').textContent = userPlan === 'pro'
-      ? 'You have unlimited questions. Let's crush it.'
+      ? 'You have unlimited questions + full AI explanations.'
       : 'You're on the free plan — 10 questions/day.';
-    document.getElementById('nav-email').textContent = user.email;
+    document.getElementById('nav-email').textContent = user.email || '';
     document.getElementById('plan-badge').textContent = userPlan === 'pro' ? 'Pro' : 'Free';
     document.getElementById('plan-badge').className = 'plan-badge ' + userPlan;
     document.getElementById('stat-plan').textContent = userPlan === 'pro' ? 'Pro ✓' : 'Free';
     document.getElementById('stat-questions').textContent = user.questions_today || 0;
 
-    if (userPlan === 'free') {
+    // Show upgrade banner for free users
+    if (userPlan !== 'pro') {
       document.getElementById('upgrade-card').style.display = 'block';
     }
 
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('portal').style.display = 'block';
-  } catch(e) {
-    window.location.href = '/login';
-  }
-})();
+  })
+  .catch(function() { signOut(); });
+}
 
 function signOut() {
-  localStorage.removeItem('ctc_access_token');
-  localStorage.removeItem('ctc_refresh_token');
+  localStorage.removeItem('ctc_token');
+  localStorage.removeItem('ctc_refresh');
   window.location.href = '/';
 }
 
@@ -265,7 +267,7 @@ function selectCert(btn) {
   document.getElementById('quiz-body').innerHTML = '<div class="lqb-idle"><strong>AI is ready</strong>Hit generate for a ' + selectedCert + ' question.</div>';
 }
 
-async function generateQuestion() {
+function generateQuestion() {
   var btn = document.getElementById('gen-btn');
   btn.disabled = true;
   document.getElementById('gen-btn-txt').textContent = 'Generating...';
@@ -273,24 +275,26 @@ async function generateQuestion() {
   document.getElementById('quiz-body').innerHTML = '<div class="lqb-loading"><div class="spinner"></div><div class="lqb-loading-txt">Generating ' + selectedCert + ' question...</div></div>';
   sessionAnswered = false;
 
-  try {
-    var r = await fetch('/api/question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ cert: selectedCert, desc: selectedDesc, previousQuestions: [], userId: userId, plan: userPlan })
-    });
-    var q = await r.json();
-    if (!r.ok) throw new Error(q.error || 'API error');
+  fetch('/api/question', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ cert: selectedCert, desc: selectedDesc, previousQuestions: [], userId: userId, plan: userPlan })
+  })
+  .then(function(r) { return r.json().then(function(q) { if (!r.ok) throw new Error(q.error || 'Error'); return q; }); })
+  .then(function(q) {
     sessionTotal++;
     renderQuestion(q);
-    document.getElementById('panel-score').textContent = 'Q' + sessionTotal + (sessionTotal > 1 ? ' · ' + sessionCorrect + '/' + (sessionTotal-1) + ' correct' : '');
+    document.getElementById('panel-score').textContent = 'Q' + sessionTotal + (sessionTotal > 1 ? ' · ' + sessionCorrect + '/' + (sessionTotal - 1) + ' correct' : '');
     document.getElementById('stat-questions').textContent = parseInt(document.getElementById('stat-questions').textContent || 0) + 1;
     updateScorePanel();
-  } catch(e) {
+    btn.disabled = false;
+    document.getElementById('gen-btn-txt').textContent = 'Next question →';
+  })
+  .catch(function(e) {
     document.getElementById('quiz-body').innerHTML = '<div class="lqb-idle"><strong>Could not load question</strong>' + e.message + '</div>';
-  }
-  btn.disabled = false;
-  document.getElementById('gen-btn-txt').textContent = 'Next question →';
+    btn.disabled = false;
+    document.getElementById('gen-btn-txt').textContent = 'Try again →';
+  });
 }
 
 function renderQuestion(q) {
@@ -298,7 +302,7 @@ function renderQuestion(q) {
   var opts = '';
   for (var i = 0; i < q.options.length; i++) {
     var o = q.options[i].replace(/^[A-D][).]s*/, '');
-    var enc = encodeURIComponent(q.explanation);
+    var enc = encodeURIComponent(q.explanation || '');
     opts += '<button class="lqb-opt" id="lopt-' + i + '" data-idx="' + i + '" data-correct="' + q.correct + '" data-exp="' + enc + '"><div class="lqb-letter">' + LETTERS[i] + '</div><span>' + o + '</span></button>';
   }
   document.getElementById('quiz-body').innerHTML = '<p class="lqb-q">' + q.question + '</p><div class="lqb-opts">' + opts + '</div><div id="explain-wrap"></div><div id="next-wrap"></div>';
@@ -313,21 +317,37 @@ function handleAnswer(sel, correct, encExp) {
   if (sessionAnswered) return;
   sessionAnswered = true;
   document.querySelectorAll('.lqb-opt').forEach(function(b) { b.disabled = true; });
+
   var isRight = (sel === correct);
   if (isRight) sessionCorrect++;
+
   var selBtn = document.getElementById('lopt-' + sel);
   if (selBtn) selBtn.classList.add(isRight ? 'correct' : 'wrong');
   if (!isRight) { var cb = document.getElementById('lopt-' + correct); if (cb) cb.classList.add('correct'); }
 
-  var exp = decodeURIComponent(encExp);
+  var exp = decodeURIComponent(encExp || '');
 
-  // PRO USERS get the FULL explanation — no gate, no truncation
-  var explainHTML = '<div class="pro-explain">'
-    + '<span class="result-label ' + (isRight ? 'correct' : 'wrong') + '">'
-    + (isRight ? '✓ Correct' : '✗ Incorrect') + '</span>'
-    + exp
-    + '</div>';
-
+  // ── PRO vs FREE explanation ──────────────────────────────────────────────
+  var explainHTML;
+  if (userPlan === 'pro') {
+    // PRO: full explanation, no gate, clear formatting
+    explainHTML = '<div class="pro-explain">'
+      + '<span class="result-label ' + (isRight ? 'correct' : 'wrong') + '">'
+      + (isRight ? '✓ Correct' : '✗ Incorrect') + '</span>'
+      + exp
+      + '</div>';
+  } else {
+    // FREE: teaser + upgrade nudge
+    var preview = exp.length > 90 ? exp.substring(0, 90) + '...' : exp;
+    explainHTML = '<div class="pro-explain">'
+      + '<span class="result-label ' + (isRight ? 'correct' : 'wrong') + '">'
+      + (isRight ? '✓ Correct' : '✗ Incorrect') + '</span>'
+      + preview
+      + '<div style="margin-top:12px;padding:12px;background:#f2f1ee;border-radius:6px;font-size:12px;color:#888580">'
+      + '<strong style="color:#0a0a0a;display:block;margin-bottom:4px">Full explanation is a Pro feature</strong>'
+      + '<a href="https://buy.stripe.com/5kQ9ATbgM56Ufjnh1i7bW00" style="color:#0a0a0a;font-weight:500">Upgrade to Pro → A$19.99/month</a>'
+      + '</div></div>';
+  }
   document.getElementById('explain-wrap').innerHTML = explainHTML;
   document.getElementById('next-wrap').innerHTML = '<button class="next-btn" onclick="generateQuestion()">Next question →</button>';
 
@@ -336,16 +356,18 @@ function handleAnswer(sel, correct, encExp) {
 }
 
 function updateScorePanel() {
-  var answered = sessionTotal > 0 ? sessionTotal : 0;
-  var wrong = answered - sessionCorrect;
-  var pct = answered > 0 ? Math.round((sessionCorrect / answered) * 100) + '%' : '—';
-  document.getElementById('sc-total').textContent = answered;
+  var wrong = sessionTotal - sessionCorrect;
+  var pct = sessionTotal > 0 ? Math.round((sessionCorrect / sessionTotal) * 100) + '%' : '—';
+  document.getElementById('sc-total').textContent = sessionTotal;
   document.getElementById('sc-correct').textContent = sessionCorrect;
   document.getElementById('sc-wrong').textContent = wrong;
   document.getElementById('sc-pct').textContent = pct;
   document.getElementById('stat-correct').textContent = sessionCorrect;
   document.getElementById('stat-accuracy').textContent = pct;
 }
+
+// Start
+boot();
 </script>
 </body>
 </html>
