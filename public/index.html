@@ -439,10 +439,15 @@ footer{border-top:1px solid var(--border);padding:36px 48px;display:flex;justify
   </div>
 </div>
 <script>
+// ── MODAL ──────────────────────────────────────────────
 function openModal(){document.getElementById('modal').classList.add('open')}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal()}
-function handleSignup(id){var email=document.getElementById(id).value.trim();if(!email||email.indexOf('@')<0){document.getElementById(id).style.outline='2px solid red';return}document.getElementById('m-email').value=email;openModal()}
+function handleSignup(id){
+  var email=document.getElementById(id).value.trim();
+  if(!email||email.indexOf('@')<0){document.getElementById(id).style.outline='2px solid red';return}
+  document.getElementById('m-email').value=email;openModal();
+}
 function submitModal(){
   var name=document.getElementById('m-name').value.trim();
   var email=document.getElementById('m-email').value.trim();
@@ -452,25 +457,31 @@ function submitModal(){
     return;
   }
   var btn=document.querySelector('.modal-btn');
-  btn.textContent='Creating account...';
-  btn.disabled=true;
-  fetch('/api/signup',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name:name,email:email})
-  })
+  btn.textContent='Creating account...';btn.disabled=true;
+  fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email})})
   .then(function(r){return r.json()})
   .then(function(d){
+    window._userId=d.userId||null;
+    window._userPlan='free';
     document.getElementById('modal-form-wrap').style.display='none';
     document.getElementById('modal-success').style.display='block';
   })
   .catch(function(){
-    // Show success anyway — don't block user
     document.getElementById('modal-form-wrap').style.display='none';
     document.getElementById('modal-success').style.display='block';
   });
 }
-var selectedCert='PSM I',selectedDesc='Scrum values, events, artifacts, accountabilities',demoAnswered=false,demoCount=0,MAX_FREE_DEMO=3;
+
+// ── DEMO QUIZ STATE ─────────────────────────────────────
+var selectedCert='PSM I';
+var selectedDesc='Scrum values, events, artifacts, accountabilities';
+var demoAnswered=false;
+var demoCount=0;
+var demoCorrect=0;
+var MAX_FREE_DEMO=3;
+var _userPlan=window._userPlan||'free';
+var _userId=window._userId||null;
+
 function selectCert(btn){
   document.querySelectorAll('.demo-cert-btn').forEach(function(b){b.classList.remove('active')});
   btn.classList.add('active');
@@ -482,8 +493,9 @@ function selectCert(btn){
   demoAnswered=false;
   document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>AI is ready</strong>Hit generate to see a '+selectedCert+' question.</div>';
 }
+
 function generateDemoQuestion(){
-  if(demoCount>=MAX_FREE_DEMO){openModal();return}
+  if(demoCount>=MAX_FREE_DEMO&&_userPlan==='free'){openModal();return}
   var btn=document.getElementById('demo-btn');
   btn.disabled=true;
   document.getElementById('demo-btn-txt').textContent='Generating...';
@@ -493,15 +505,19 @@ function generateDemoQuestion(){
   fetch('/api/question',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({cert:selectedCert,desc:selectedDesc,previousQuestions:[]})
+    body:JSON.stringify({cert:selectedCert,desc:selectedDesc,previousQuestions:[],userId:_userId,plan:_userPlan})
   })
-  .then(function(res){return res.json().then(function(q){if(!res.ok)throw new Error(q.error||'API error');return q})})
+  .then(function(r){return r.json().then(function(q){if(!r.ok)throw new Error(q.error||'API error');return q})})
   .then(function(q){
     demoCount++;
     renderQuestion(q);
-    document.getElementById('lqb-status').textContent='Question '+demoCount;
+    document.getElementById('lqb-status').textContent='Question '+demoCount+(demoCount>0?' · '+demoCorrect+'/'+demoCount+' correct':'');
     btn.disabled=false;
-    document.getElementById('demo-btn-txt').textContent=demoCount>=MAX_FREE_DEMO?'Sign up for more →':'Generate another →';
+    if(_userPlan==='free'){
+      document.getElementById('demo-btn-txt').textContent=demoCount>=MAX_FREE_DEMO?'Sign up for more →':'Generate another →';
+    } else {
+      document.getElementById('demo-btn-txt').textContent='Next question →';
+    }
   })
   .catch(function(e){
     document.getElementById('lqb-body').innerHTML='<div class="lqb-idle"><strong>Could not load question</strong>'+e.message+'</div>';
@@ -509,39 +525,81 @@ function generateDemoQuestion(){
     document.getElementById('demo-btn-txt').textContent='Try again →';
   });
 }
+
 var LETTERS=['A','B','C','D'];
 function renderQuestion(q){
   demoAnswered=false;
   var opts='';
   for(var i=0;i<q.options.length;i++){
-    var o=q.options[i].replace(/^[A-D][).]\s*/,'');
+    var o=q.options[i].replace(/^[A-D][).]s*/,'');
     var enc=encodeURIComponent(q.explanation);
     opts+='<button class="lqb-opt" id="lopt-'+i+'" data-idx="'+i+'" data-correct="'+q.correct+'" data-exp="'+enc+'"><div class="lqb-letter">'+LETTERS[i]+'</div><span>'+o+'</span></button>';
   }
   document.getElementById('lqb-body').innerHTML='<p class="lqb-q">'+q.question+'</p><div class="lqb-opts" id="lqb-opts">'+opts+'</div><div id="lqb-explain-wrap"></div><div id="lqb-next-wrap"></div>';
   document.querySelectorAll('.lqb-opt').forEach(function(b){
     b.addEventListener('click',function(){
-      var idx=parseInt(this.getAttribute('data-idx'));
-      var correct=parseInt(this.getAttribute('data-correct'));
-      var enc=this.getAttribute('data-exp');
-      selectAnswer(idx,correct,enc);
+      selectAnswer(parseInt(this.getAttribute('data-idx')),parseInt(this.getAttribute('data-correct')),this.getAttribute('data-exp'));
     });
   });
 }
+
 function selectAnswer(sel,correct,encExp){
   if(demoAnswered)return;
   demoAnswered=true;
   document.querySelectorAll('.lqb-opt').forEach(function(b){b.disabled=true});
   var isRight=(sel===correct);
+  if(isRight)demoCorrect++;
   var selBtn=document.getElementById('lopt-'+sel);
   if(selBtn)selBtn.classList.add(isRight?'correct':'wrong');
   if(!isRight){var cb=document.getElementById('lopt-'+correct);if(cb)cb.classList.add('correct');}
+
+  // Update score in header
+  document.getElementById('lqb-status').textContent='Q'+demoCount+' · '+demoCorrect+'/'+demoCount+' correct';
+
   var exp=decodeURIComponent(encExp);
-  var gate='<div class="lqb-pro-gate" style="margin-top:10px"><strong>Full AI explanation is a Pro feature</strong>See exactly why each answer is right or wrong — and never make the same mistake twice.<br><a onclick="openModal()" style="cursor:pointer">Unlock with Pro → A$19.99/month</a></div>';
-  document.getElementById('lqb-explain-wrap').innerHTML='<div class="lqb-explain"><strong>'+(isRight?'✓ Correct!':'✗ Incorrect.')+'</strong> '+exp.substring(0,100)+'...'+gate+'</div>';
-  var nextBtn=demoCount>=MAX_FREE_DEMO?'<button class="lqb-next" onclick="openModal()">Sign up for unlimited questions →</button>':'<button class="lqb-next" onclick="generateDemoQuestion()">Next question →</button>';
-  document.getElementById('lqb-next-wrap').innerHTML=nextBtn;
+  var explainHTML='';
+
+  if(_userPlan==='pro'){
+    // PRO: full explanation, no gate
+    explainHTML='<div class="lqb-explain">'
+      +'<strong style="color:var(--black)">'+(isRight?'✓ Correct!':'✗ Incorrect.')+'</strong> '
+      +exp
+      +'</div>';
+  } else {
+    // FREE: truncated + upgrade gate
+    var preview=exp.length>80?exp.substring(0,80)+'...':exp;
+    explainHTML='<div class="lqb-explain">'
+      +'<strong style="color:var(--black)">'+(isRight?'✓ Correct!':'✗ Incorrect.')+'</strong> '
+      +preview
+      +'<div class="lqb-pro-gate" style="margin-top:10px">'
+      +'<strong>Full AI explanation is a Pro feature</strong>'
+      +'See exactly why each answer is right or wrong — and never make the same mistake twice.<br>'
+      +'<a onclick="openModal()" style="cursor:pointer">Unlock with Pro → A$19.99/month</a>'
+      +'</div></div>';
+  }
+  document.getElementById('lqb-explain-wrap').innerHTML=explainHTML;
+
+  // Next button or session summary
+  var nextHTML='';
+  if(_userPlan==='free'&&demoCount>=MAX_FREE_DEMO){
+    // Session summary for free users after 3 questions
+    var pct=Math.round((demoCorrect/demoCount)*100);
+    var msg=pct===100?'Perfect score! 🌟':pct>=67?'Good work! Keep going.':'More practice needed.';
+    nextHTML='<div style="margin-top:14px;padding:16px;background:var(--off);border-radius:8px;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Free demo complete</div>'
+      +'<div style="font-family:var(--serif);font-size:28px;font-weight:900;color:var(--black)">'+demoCorrect+'/'+demoCount+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:14px">'+msg+'</div>'
+      +'<button class="lqb-next" onclick="openModal()" style="background:var(--black);color:var(--white);width:100%">'
+      +'Sign up free for 10 questions/day →</button>'
+      +'<p style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:8px">Or <a onclick="openModal()" style="color:var(--black);font-weight:500;cursor:pointer">upgrade to Pro</a> for unlimited questions + full AI explanations</p>'
+      +'</div>';
+  } else {
+    nextHTML='<button class="lqb-next" onclick="generateDemoQuestion()">Next question →</button>';
+  }
+  document.getElementById('lqb-next-wrap').innerHTML=nextHTML;
 }
+
+// ── FAQ ─────────────────────────────────────────────────
 function toggleFaq(el){el.parentElement.classList.toggle('open')}
 </script>
 </body>
