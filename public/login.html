@@ -2,119 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Sign in — CrushTheCert</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--black:#0a0a0a;--white:#fafaf8;--off:#f2f1ee;--border:#e0ddd8;--muted:#888580;--serif:'Playfair Display',Georgia,serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace}
 body{background:var(--white);color:var(--black);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
 .logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--black);text-decoration:none;margin-bottom:48px;display:block;text-align:center}
-.logo span{opacity:0.4}
-.card{background:var(--white);border:1.5px solid var(--black);border-radius:16px;padding:40px;max-width:400px;width:100%;box-shadow:8px 8px 0 var(--black)}
+.logo span{opacity:.4}
+.card{background:var(--white);border:1.5px solid var(--black);border-radius:16px;padding:40px;max-width:400px;width:100%;box-shadow:6px 6px 0 var(--black)}
 h1{font-family:var(--serif);font-size:28px;font-weight:900;margin-bottom:8px}
-.sub{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.6}
-label{display:block;font-size:12px;font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:13px 16px;font-family:var(--sans);font-size:14px;outline:none;margin-bottom:20px;transition:border-color 0.2s;background:var(--white);color:var(--black)}
-input:focus{border-color:var(--black)}
-button{width:100%;background:var(--black);color:var(--white);border:none;border-radius:8px;padding:14px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;transition:opacity 0.2s}
-button:hover{opacity:0.8}
-button:disabled{opacity:0.5;cursor:default}
-.note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px;font-family:var(--mono)}
-.success{display:none;text-align:center;padding:20px 0}
-.success .icon{font-size:40px;margin-bottom:16px}
+.sub{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+label{display:block;font-size:11px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+input[type=email]{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:13px 16px;font-family:var(--sans);font-size:15px;outline:none;margin-bottom:20px;background:var(--white);color:var(--black);transition:border-color .2s}
+input[type=email]:focus{border-color:var(--black)}
+.btn{width:100%;background:var(--black);color:var(--white);border:none;border-radius:8px;padding:14px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.82}
+.btn:disabled{opacity:.45;cursor:default}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;font-family:var(--mono);line-height:1.6}
+.err{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:13px;color:#dc2626;margin-bottom:16px;display:none}
+.success{display:none;text-align:center;padding:8px 0}
+.success .icon{font-size:36px;margin-bottom:16px}
 .success h2{font-family:var(--serif);font-size:22px;font-weight:700;margin-bottom:8px}
 .success p{font-size:14px;color:var(--muted);line-height:1.6}
+.redirecting{text-align:center;padding:8px 0;display:none}
+.redirecting p{font-size:14px;color:var(--muted);margin-top:12px;font-family:var(--mono)}
+.spin{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--black);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
 .back{display:block;text-align:center;margin-top:24px;font-size:13px;color:var(--muted);text-decoration:none}
 .back:hover{color:var(--black)}
-.error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:13px;color:#dc2626;margin-bottom:16px;display:none}
 </style>
 </head>
 <body>
 <a href="/" class="logo">Crush<span>The</span>Cert</a>
 <div class="card">
+  <div id="redirecting" class="redirecting">
+    <div class="spin"></div>
+    <p>Signing you in...</p>
+  </div>
   <div id="form-wrap">
     <h1>Sign in</h1>
-    <p class="sub">Enter your email and we'll send you a magic link — no password needed.</p>
-    <div class="error-msg" id="error-msg"></div>
+    <p class="sub">Enter your email — we'll send a magic link. No password needed.</p>
+    <div class="err" id="err"></div>
     <label>Email address</label>
     <input type="email" id="email" placeholder="you@example.com" autofocus>
-    <button id="btn" onclick="sendMagicLink()">Send magic link →</button>
+    <button class="btn" id="btn" onclick="sendLink()">Send magic link →</button>
     <p class="note">Pro subscribers: use the email you signed up with</p>
   </div>
   <div class="success" id="success">
     <div class="icon">📬</div>
     <h2>Check your inbox</h2>
-    <p>We sent a magic link to <strong id="sent-email"></strong>.<br>Click it to sign in — it expires in 1 hour.</p>
+    <p>We sent a magic link to <strong id="sent-to"></strong>.<br>Click it to sign in — expires in 1 hour.</p>
   </div>
 </div>
 <a href="/" class="back">← Back to crushthecert.com</a>
 
 <script>
-// Check if we have a token in URL hash (after magic link click)
-(async function() {
-  const hash = window.location.hash;
-  if (hash.includes('access_token')) {
-    const params = new URLSearchParams(hash.substring(1));
-    const token = params.get('access_token');
-    const refresh = params.get('refresh_token');
-    if (token) {
-      // Store session and redirect to portal
-      localStorage.setItem('ctc_access_token', token);
-      if (refresh) localStorage.setItem('ctc_refresh_token', refresh);
-      // Verify plan and redirect
-      try {
-        const r = await fetch('/api/me', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const d = await r.json();
-        if (d.plan === 'pro') {
-          window.location.href = '/portal';
-        } else {
-          window.location.href = '/portal?plan=free';
-        }
-      } catch(e) {
-        window.location.href = '/portal';
-      }
-    }
+// ── TOKEN HANDLER ─────────────────────────────────────────────────────────────
+// Supabase magic links redirect back here with #access_token=...&refresh_token=...
+// We catch that, store the tokens, then redirect to /portal
+(function handleMagicLinkReturn() {
+  var hash = window.location.hash;
+  if (!hash || !hash.includes('access_token')) return;
+
+  // Show redirecting spinner immediately
+  document.getElementById('form-wrap').style.display = 'none';
+  document.getElementById('redirecting').style.display = 'block';
+
+  var params = {};
+  hash.substring(1).split('&').forEach(function(p) {
+    var kv = p.split('=');
+    params[kv[0]] = decodeURIComponent(kv[1] || '');
+  });
+
+  var token = params['access_token'];
+  var refresh = params['refresh_token'];
+
+  if (!token) {
+    document.getElementById('redirecting').style.display = 'none';
+    document.getElementById('form-wrap').style.display = 'block';
+    return;
   }
+
+  // Store tokens in localStorage
+  localStorage.setItem('ctc_token', token);
+  if (refresh) localStorage.setItem('ctc_refresh', refresh);
+
+  // Clean URL then redirect to portal
+  window.history.replaceState({}, '', '/login');
+  window.location.href = '/portal';
 })();
 
-async function sendMagicLink() {
-  const email = document.getElementById('email').value.trim();
-  const btn = document.getElementById('btn');
-  const errEl = document.getElementById('error-msg');
+// ── SEND MAGIC LINK ───────────────────────────────────────────────────────────
+function sendLink() {
+  var email = document.getElementById('email').value.trim();
+  var btn = document.getElementById('btn');
+  var errEl = document.getElementById('err');
   errEl.style.display = 'none';
+  document.getElementById('email').style.outline = '';
 
-  if (!email || !email.includes('@')) {
-    document.getElementById('email').style.outline = '2px solid red';
+  if (!email || email.indexOf('@') < 0) {
+    document.getElementById('email').style.outline = '2px solid #dc2626';
     return;
   }
 
   btn.textContent = 'Sending...';
   btn.disabled = true;
 
-  try {
-    const r = await fetch('/api/magic-link', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Failed to send');
-    document.getElementById('sent-email').textContent = email;
+  fetch('/api/magic-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.error) throw new Error(d.error);
+    document.getElementById('sent-to').textContent = email;
     document.getElementById('form-wrap').style.display = 'none';
     document.getElementById('success').style.display = 'block';
-  } catch (e) {
-    errEl.textContent = e.message;
+  })
+  .catch(function(e) {
+    errEl.textContent = e.message || 'Could not send link. Try again.';
     errEl.style.display = 'block';
     btn.textContent = 'Send magic link →';
     btn.disabled = false;
-  }
+  });
 }
 
 document.getElementById('email').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') sendMagicLink();
+  if (e.key === 'Enter') sendLink();
 });
 </script>
 </body>
