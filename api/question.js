@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 module.exports = async (req, res) => {
@@ -12,7 +13,8 @@ module.exports = async (req, res) => {
   if (!cert) return res.status(400).json({ error: 'cert is required' });
 
   try {
-    const prompt = `You are a strict ${cert} exam question generator. Generate exactly 1 exam-style multiple-choice question for ${cert}. Topic area: ${desc||cert}. Return ONLY valid JSON, no markdown: {"question":"text","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explanation":"2-3 sentence explanation"}. correct is 0-based index. Realistic exam difficulty.`;
+    const prevList = (previousQuestions||[]).slice(-5).map(function(q){ return '- ' + q; }).join('\n');
+    const prompt = 'You are a strict ' + cert + ' exam question generator. Generate exactly 1 exam-style multiple-choice question for ' + cert + '. Topic area: ' + (desc||cert) + (prevList ? '. Do NOT repeat: ' + prevList : '') + '. Return ONLY valid JSON, no markdown, no backticks: {"question":"text","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explanation":"2-3 sentence explanation"}. correct is 0-based index. Realistic exam difficulty.';
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -20,10 +22,16 @@ module.exports = async (req, res) => {
       messages: [{ role: 'user', content: prompt }]
     });
 
-    const text = message.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const text = message.content[0].text.trim().replace(/```json|\n```|```/g,'').trim();
     const question = JSON.parse(text);
+
+    if (!question.question || !question.options || question.correct === undefined) {
+      throw new Error('Invalid question format');
+    }
+
     return res.status(200).json(question);
   } catch (err) {
+    console.error('Question error:', err.message);
     return res.status(500).json({ error: 'Failed to generate question', details: err.message });
   }
 };
