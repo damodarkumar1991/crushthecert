@@ -223,7 +223,7 @@ footer{border-top:1px solid var(--border);padding:36px 48px;display:flex;justify
     <a href="#ai">AI features</a>
     <a href="#demo">Try it free</a>
     <a href="#pricing">Pricing</a>
-    <a href="/login" style="color:var(--muted);font-size:13px;text-decoration:none">Sign in</a>
+    <a href="/login" style="color:var(--black);font-size:13px;font-weight:500;text-decoration:none;border:1.5px solid var(--black);padding:6px 16px;border-radius:100px;transition:all 0.2s" onmouseover="this.style.background='var(--black)';this.style.color='var(--white)'" onmouseout="this.style.background='';this.style.color='var(--black)'">Sign in</a>
     <a href="#" class="nav-cta" onclick="openModal()">Sign up free</a>
   </div>
 </nav>
@@ -459,14 +459,21 @@ function submitModal(){
     return;
   }
   var btn=document.querySelector('.modal-btn');
-  btn.textContent='Creating account...';btn.disabled=true;
+  btn.textContent='Sending magic link...';
+  btn.disabled=true;
+
+  // Step 1: Create account, Step 2: Send magic link
   fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email})})
-  .then(function(r){return r.json()})
-  .then(function(d){
-    window._userId=d.userId||null;
-    window._userPlan='free';
+  .then(function(r){return r.json();})
+  .then(function(){
+    // Now send magic link so they can enter the portal
+    return fetch('/api/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+  })
+  .then(function(){
+    // Show success — tell them to check email for portal link
     document.getElementById('modal-form-wrap').style.display='none';
     document.getElementById('modal-success').style.display='block';
+    document.getElementById('modal-success').innerHTML='<div style="text-align:center;padding:8px 0"><div style="font-size:36px;margin-bottom:16px">📬</div><h2 style="font-family:var(--serif);font-size:22px;font-weight:700;margin-bottom:8px">Check your email!</h2><p style="font-size:14px;color:var(--muted);line-height:1.6">We sent a magic link to <strong>'+email+'</strong>.<br>Click it to enter your CrushTheCert portal.</p></div>';
   })
   .catch(function(){
     document.getElementById('modal-form-wrap').style.display='none';
