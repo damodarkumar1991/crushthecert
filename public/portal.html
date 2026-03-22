@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Portal — CrushTheCert</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#0a0a0a;--white:#fafaf8;--off:#f2f1ee;--border:#e0ddd8;--muted:#888580;--dim:#d4d1cb;--gold:#d4a843;--serif:'Playfair Display',Georgia,serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--off);color:var(--black);font-family:var(--sans);font-weight:400;line-height:1.6;min-height:100vh}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,250,248,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px}
+.nav-logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--black);text-decoration:none}
+.nav-logo span{opacity:0.4}
+.nav-right{display:flex;align-items:center;gap:16px}
+.plan-badge{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:4px 10px;border-radius:100px;font-weight:500}
+.plan-badge.pro{background:var(--black);color:var(--white)}
+.plan-badge.free{background:var(--off);color:var(--muted);border:1px solid var(--border)}
+.nav-email{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.signout-btn{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:var(--mono);padding:4px 8px;border-radius:4px}
+.signout-btn:hover{color:var(--black)}
+
+/* MAIN LAYOUT */
+.main{max-width:1100px;margin:0 auto;padding:80px 24px 48px}
+.greeting{margin-bottom:32px}
+.greeting h1{font-family:var(--serif);font-size:clamp(28px,3.5vw,42px);font-weight:900;line-height:1.1;margin-bottom:6px}
+.greeting p{font-size:15px;color:var(--muted)}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px}
+.stat-num{font-family:var(--serif);font-size:36px;font-weight:900;line-height:1;margin-bottom:4px}
+.stat-num.gold{color:var(--gold)}
+.stat-label{font-size:13px;color:var(--muted)}
+
+/* CERT SELECTOR */
+.section-label{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px}
+.cert-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.cert-pill{font-family:var(--mono);font-size:12px;padding:7px 16px;border-radius:100px;border:1px solid var(--border);background:var(--white);color:var(--muted);cursor:pointer;transition:all 0.2s}
+.cert-pill:hover,.cert-pill.active{background:var(--black);color:var(--white);border-color:var(--black)}
+
+/* QUIZ AREA */
+.quiz-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.quiz-panel{background:var(--white);border:1.5px solid var(--black);border-radius:12px;overflow:hidden;box-shadow:4px 4px 0 var(--black)}
+.panel-header{background:var(--black);color:var(--white);padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:var(--mono);font-size:12px;letter-spacing:0.08em}
+.panel-score{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.6)}
+.panel-body{padding:24px 20px;min-height:320px}
+
+/* QUIZ ELEMENTS */
+.lqb-idle{text-align:center;padding:48px 16px;color:var(--muted);font-size:14px;line-height:1.7}
+.lqb-idle strong{display:block;font-family:var(--serif);font-size:20px;font-weight:700;color:var(--black);margin-bottom:8px}
+.lqb-loading{display:flex;align-items:center;gap:10px;padding:60px 20px;justify-content:center;flex-direction:column}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--black);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lqb-loading-txt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.lqb-q{font-size:15px;line-height:1.65;margin-bottom:20px;font-weight:400}
+.lqb-opts{display:flex;flex-direction:column;gap:8px}
+.lqb-opt{border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all 0.15s;background:none;text-align:left;width:100%;font-family:var(--sans);color:var(--black);line-height:1.4}
+.lqb-opt:hover:not(:disabled){border-color:var(--black);background:var(--off)}
+.lqb-opt:disabled{cursor:default}
+.lqb-opt.correct{border-color:var(--black);background:var(--black);color:var(--white)}
+.lqb-opt.wrong{border-color:var(--border);opacity:0.4}
+.lqb-letter{width:22px;height:22px;border-radius:4px;background:var(--off);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;font-family:var(--mono);flex-shrink:0}
+.lqb-opt.correct .lqb-letter{background:rgba(255,255,255,0.2);color:var(--white)}
+
+/* PRO EXPLANATION - Full, no gate */
+.pro-explain{margin-top:16px;padding:14px 16px;background:var(--off);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.7;border-left:3px solid var(--black)}
+.pro-explain strong{color:var(--black)}
+.pro-explain .result-label{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;display:block}
+.pro-explain .result-label.correct{color:#0f6e56}
+.pro-explain .result-label.wrong{color:#dc2626}
+
+.next-btn{margin-top:14px;background:var(--black);color:var(--white);border:none;padding:10px 20px;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.2s}
+.next-btn:hover{opacity:0.8}
+
+/* GENERATE BUTTON */
+.gen-btn{background:var(--black);color:var(--white);border:none;padding:12px 24px;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;transition:opacity 0.2s;display:inline-flex;align-items:center;gap:8px}
+.gen-btn:hover{opacity:0.8}
+.gen-btn:disabled{opacity:0.5;cursor:default}
+
+/* SCORE PANEL */
+.score-panel{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px}
+.score-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.score-row:last-child{border-bottom:none}
+.score-key{color:var(--muted)}
+.score-val{font-weight:500}
+
+/* UPGRADE CARD for free users */
+.upgrade-card{background:var(--black);color:var(--white);border-radius:12px;padding:28px;margin-bottom:32px}
+.upgrade-card h2{font-family:var(--serif);font-size:22px;font-weight:900;margin-bottom:8px}
+.upgrade-card p{font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:20px;line-height:1.6}
+.upgrade-btn{background:var(--white);color:var(--black);border:none;padding:12px 24px;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block}
+.upgrade-btn:hover{opacity:0.9}
+
+/* LOADING STATE */
+.loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
+.loading-screen p{font-family:var(--mono);font-size:13px;color:var(--muted)}
+
+@media(max-width:768px){
+  .stats-row{grid-template-columns:1fr 1fr}
+  .quiz-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">Crush<span>The</span>Cert</a>
+  <div class="nav-right">
+    <span class="nav-email" id="nav-email"></span>
+    <span class="plan-badge" id="plan-badge">...</span>
+    <button class="signout-btn" onclick="signOut()">Sign out</button>
+  </div>
+</nav>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="spinner" style="width:36px;height:36px"></div>
+  <p>Loading your portal...</p>
+</div>
+
+<div id="portal" style="display:none">
+  <div class="main">
+    <!-- Greeting -->
+    <div class="greeting">
+      <h1 id="greeting-text">Welcome back.</h1>
+      <p id="greeting-sub">Ready to crush your next cert?</p>
+    </div>
+
+    <!-- Upgrade banner for free users -->
+    <div class="upgrade-card" id="upgrade-card" style="display:none">
+      <h2>Upgrade to Pro to unlock this portal</h2>
+      <p>Get unlimited questions, full AI explanations, weak spot analysis and your progress dashboard — from A$19.99/month.</p>
+      <a href="https://buy.stripe.com/5kQ9ATbgM56Ufjnh1i7bW00" class="upgrade-btn">Upgrade to Pro →</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-questions">0</div>
+        <div class="stat-label">Questions today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-correct">0</div>
+        <div class="stat-label">Correct this session</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-accuracy">—</div>
+        <div class="stat-label">Session accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num gold" id="stat-plan">Free</div>
+        <div class="stat-label">Current plan</div>
+      </div>
+    </div>
+
+    <!-- Cert selector -->
+    <div class="section-label">Select cert track</div>
+    <div class="cert-pills" id="cert-pills">
+      <button class="cert-pill active" data-cert="PSM I" data-desc="Scrum values, events, artifacts, accountabilities" onclick="selectCert(this)">PSM I</button>
+      <button class="cert-pill" data-cert="PSM II" data-desc="Advanced Scrum mastery, coaching and facilitation" onclick="selectCert(this)">PSM II</button>
+      <button class="cert-pill" data-cert="PMP" data-desc="Project management processes, domains and principles" onclick="selectCert(this)">PMP</button>
+      <button class="cert-pill" data-cert="AWS CCP" data-desc="AWS core services, pricing models and architecture basics" onclick="selectCert(this)">AWS CCP</button>
+      <button class="cert-pill" data-cert="AWS SAA" data-desc="AWS solutions architecture, scalability and resilience" onclick="selectCert(this)">AWS SAA</button>
+      <button class="cert-pill" data-cert="Salesforce Admin" data-desc="Salesforce objects, security, automation and reporting" onclick="selectCert(this)">SF Admin</button>
+      <button class="cert-pill" data-cert="SAFe Agilist" data-desc="Lean-Agile mindset, PI Planning and ARTs" onclick="selectCert(this)">SAFe</button>
+      <button class="cert-pill" data-cert="CSM" data-desc="Certified ScrumMaster fundamentals and practices" onclick="selectCert(this)">CSM</button>
+    </div>
+
+    <!-- Quiz + Score grid -->
+    <div class="quiz-grid">
+      <div class="quiz-panel">
+        <div class="panel-header">
+          <span class="panel-title" id="panel-cert-name">PSM I</span>
+          <span class="panel-score" id="panel-score">Ready</span>
+        </div>
+        <div class="panel-body" id="quiz-body">
+          <div class="lqb-idle">
+            <strong>AI is ready</strong>
+            Hit generate to get your first question. Pro members get unlimited questions with full explanations.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <button class="gen-btn" id="gen-btn" onclick="generateQuestion()" style="margin-bottom:20px;width:100%;justify-content:center">
+          <span id="gen-btn-txt">Generate AI question →</span>
+        </button>
+        <div class="score-panel">
+          <div class="section-label" style="margin-bottom:12px">Session stats</div>
+          <div class="score-row"><span class="score-key">Questions answered</span><span class="score-val" id="sc-total">0</span></div>
+          <div class="score-row"><span class="score-key">Correct</span><span class="score-val" id="sc-correct">0</span></div>
+          <div class="score-row"><span class="score-key">Incorrect</span><span class="score-val" id="sc-wrong">0</span></div>
+          <div class="score-row"><span class="score-key">Accuracy</span><span class="score-val" id="sc-pct">—</span></div>
+          <div class="score-row"><span class="score-key">Current cert</span><span class="score-val" id="sc-cert">PSM I</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var token = localStorage.getItem('ctc_access_token');
+var userPlan = 'free';
+var userId = null;
+var sessionTotal = 0;
+var sessionCorrect = 0;
+var sessionAnswered = false;
+var selectedCert = 'PSM I';
+var selectedDesc = 'Scrum values, events, artifacts, accountabilities';
+var LETTERS = ['A','B','C','D'];
+
+// Auth check on load
+(async function init() {
+  if (!token) {
+    window.location.href = '/login';
+    return;
+  }
+  try {
+    var r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.status === 401) { signOut(); return; }
+    var user = await r.json();
+    userId = user.id;
+    userPlan = user.plan;
+
+    // Update UI
+    var name = user.name || user.email.split('@')[0];
+    document.getElementById('greeting-text').textContent = 'Welcome back, ' + name + '.';
+    document.getElementById('greeting-sub').textContent = userPlan === 'pro'
+      ? 'You have unlimited questions. Let's crush it.'
+      : 'You're on the free plan — 10 questions/day.';
+    document.getElementById('nav-email').textContent = user.email;
+    document.getElementById('plan-badge').textContent = userPlan === 'pro' ? 'Pro' : 'Free';
+    document.getElementById('plan-badge').className = 'plan-badge ' + userPlan;
+    document.getElementById('stat-plan').textContent = userPlan === 'pro' ? 'Pro ✓' : 'Free';
+    document.getElementById('stat-questions').textContent = user.questions_today || 0;
+
+    if (userPlan === 'free') {
+      document.getElementById('upgrade-card').style.display = 'block';
+    }
+
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('portal').style.display = 'block';
+  } catch(e) {
+    window.location.href = '/login';
+  }
+})();
+
+function signOut() {
+  localStorage.removeItem('ctc_access_token');
+  localStorage.removeItem('ctc_refresh_token');
+  window.location.href = '/';
+}
+
+function selectCert(btn) {
+  document.querySelectorAll('.cert-pill').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  selectedCert = btn.dataset.cert;
+  selectedDesc = btn.dataset.desc;
+  document.getElementById('panel-cert-name').textContent = selectedCert;
+  document.getElementById('panel-score').textContent = 'Ready';
+  document.getElementById('sc-cert').textContent = selectedCert;
+  sessionAnswered = false;
+  document.getElementById('quiz-body').innerHTML = '<div class="lqb-idle"><strong>AI is ready</strong>Hit generate for a ' + selectedCert + ' question.</div>';
+}
+
+async function generateQuestion() {
+  var btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('gen-btn-txt').textContent = 'Generating...';
+  document.getElementById('panel-score').textContent = 'AI thinking...';
+  document.getElementById('quiz-body').innerHTML = '<div class="lqb-loading"><div class="spinner"></div><div class="lqb-loading-txt">Generating ' + selectedCert + ' question...</div></div>';
+  sessionAnswered = false;
+
+  try {
+    var r = await fetch('/api/question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ cert: selectedCert, desc: selectedDesc, previousQuestions: [], userId: userId, plan: userPlan })
+    });
+    var q = await r.json();
+    if (!r.ok) throw new Error(q.error || 'API error');
+    sessionTotal++;
+    renderQuestion(q);
+    document.getElementById('panel-score').textContent = 'Q' + sessionTotal + (sessionTotal > 1 ? ' · ' + sessionCorrect + '/' + (sessionTotal-1) + ' correct' : '');
+    document.getElementById('stat-questions').textContent = parseInt(document.getElementById('stat-questions').textContent || 0) + 1;
+    updateScorePanel();
+  } catch(e) {
+    document.getElementById('quiz-body').innerHTML = '<div class="lqb-idle"><strong>Could not load question</strong>' + e.message + '</div>';
+  }
+  btn.disabled = false;
+  document.getElementById('gen-btn-txt').textContent = 'Next question →';
+}
+
+function renderQuestion(q) {
+  sessionAnswered = false;
+  var opts = '';
+  for (var i = 0; i < q.options.length; i++) {
+    var o = q.options[i].replace(/^[A-D][).]s*/, '');
+    var enc = encodeURIComponent(q.explanation);
+    opts += '<button class="lqb-opt" id="lopt-' + i + '" data-idx="' + i + '" data-correct="' + q.correct + '" data-exp="' + enc + '"><div class="lqb-letter">' + LETTERS[i] + '</div><span>' + o + '</span></button>';
+  }
+  document.getElementById('quiz-body').innerHTML = '<p class="lqb-q">' + q.question + '</p><div class="lqb-opts">' + opts + '</div><div id="explain-wrap"></div><div id="next-wrap"></div>';
+  document.querySelectorAll('.lqb-opt').forEach(function(b) {
+    b.addEventListener('click', function() {
+      handleAnswer(parseInt(this.getAttribute('data-idx')), parseInt(this.getAttribute('data-correct')), this.getAttribute('data-exp'));
+    });
+  });
+}
+
+function handleAnswer(sel, correct, encExp) {
+  if (sessionAnswered) return;
+  sessionAnswered = true;
+  document.querySelectorAll('.lqb-opt').forEach(function(b) { b.disabled = true; });
+  var isRight = (sel === correct);
+  if (isRight) sessionCorrect++;
+  var selBtn = document.getElementById('lopt-' + sel);
+  if (selBtn) selBtn.classList.add(isRight ? 'correct' : 'wrong');
+  if (!isRight) { var cb = document.getElementById('lopt-' + correct); if (cb) cb.classList.add('correct'); }
+
+  var exp = decodeURIComponent(encExp);
+
+  // PRO USERS get the FULL explanation — no gate, no truncation
+  var explainHTML = '<div class="pro-explain">'
+    + '<span class="result-label ' + (isRight ? 'correct' : 'wrong') + '">'
+    + (isRight ? '✓ Correct' : '✗ Incorrect') + '</span>'
+    + exp
+    + '</div>';
+
+  document.getElementById('explain-wrap').innerHTML = explainHTML;
+  document.getElementById('next-wrap').innerHTML = '<button class="next-btn" onclick="generateQuestion()">Next question →</button>';
+
+  document.getElementById('panel-score').textContent = 'Q' + sessionTotal + ' · ' + sessionCorrect + '/' + sessionTotal + ' correct';
+  updateScorePanel();
+}
+
+function updateScorePanel() {
+  var answered = sessionTotal > 0 ? sessionTotal : 0;
+  var wrong = answered - sessionCorrect;
+  var pct = answered > 0 ? Math.round((sessionCorrect / answered) * 100) + '%' : '—';
+  document.getElementById('sc-total').textContent = answered;
+  document.getElementById('sc-correct').textContent = sessionCorrect;
+  document.getElementById('sc-wrong').textContent = wrong;
+  document.getElementById('sc-pct').textContent = pct;
+  document.getElementById('stat-correct').textContent = sessionCorrect;
+  document.getElementById('stat-accuracy').textContent = pct;
+}
+</script>
+</body>
+</html>
